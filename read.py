@@ -39,6 +39,7 @@ for i in range(imgs):
     train_truth_layers[i][train_lbls[i]] = 1
 
 
+
 '''
 We now have our database fully read in. Our images are a 3d numpy array and our labels are a 1d numpy array.
 Now we want to create a network object that can be trained.
