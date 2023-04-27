@@ -27,6 +27,7 @@ train_imgs = np.zeros((imgs, rows, cols)) #square format
 train_input_layers = np.zeros((imgs, rows * cols)) #layer format
 print("reading in images...")
 for i in range(imgs):
+
     train_img = train_imgs_file.read(rows*cols)
     train_imgs[i] = np.array([int(j) for j in train_img]).reshape(rows,cols)
     train_input_layers[i] = np.array([int(j) for j in train_img])
