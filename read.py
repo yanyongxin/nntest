@@ -1,5 +1,6 @@
 import math
 import struct
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -31,7 +32,7 @@ for i in range(imgs):
 
     train_img = train_imgs_file.read(rows*cols)
     train_imgs[i] = np.array([int(j) for j in train_img]).reshape(rows,cols)
-    train_input_layers[i] = np.array([int(j) for j in train_img])
+    train_input_layers[i] = np.array([int(j) for j in train_img])/255
 
 #read labels into np array
 train_lbls = np.array([int(i) for i in train_lbls_file.read(imgs)]) #single digit
@@ -46,6 +47,7 @@ We now have our database fully read in. Our images are a 3d numpy array and our 
 Now we want to create a network object that can be trained.
 By trained, what we mean is adjust weights and biases over several epochs.
 '''
+#np.set_printoptions(threshold=sys.maxsize)
 
 def sigmoid(x):
     return(1/(1 + np.exp(-x)))
@@ -59,16 +61,16 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
         self.layers = layers #tuple
         self.weights = []
         for i in range(1, len(layers)):
-            self.weights.append(np.zeros((layers[i],layers[i-1])))
+            self.weights.append(np.full((layers[i],layers[i-1]), 1.0))
         self.biases = []
         for i in range(1, len(layers)):
-            self.biases.append(np.zeros((layers[i])))
+            self.biases.append(np.full((layers[i]), 0.5))
         self.net = [] # contains activations
         for i in range(len(layers)):
             self.net.append(np.zeros((layers[i])))
 
     def dump(self):
-        print(self.layers)
+        print("DUMP========")
         print(self.biases)
         print(self.weights)
 
@@ -87,6 +89,7 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
         for i in range(len(inputs)):
             output = self.forward(inputs[i])
             ssd_array[i] = self.ssd(labels[i], output)
+        print("LOSS ARRAY:", ssd_array)
         return np.mean(ssd_array)
 
     def backprop(self, label, example): # for one training example
@@ -141,23 +144,21 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
                 d_biases.append(np.zeros((self.layers[i+1])))
             for j in range(len(data_batched[i])):
                 this_d_weights, this_d_biases = self.backprop(labels_batched[i][j], data_batched[i][j])
-                print("backprop results:", this_d_weights, this_d_biases)
                 d_weights_list.append(this_d_weights)
                 d_biases_list.append(this_d_biases)
             for j in range(len(self.layers)-1):    
                 for k in range(len(data_batched[i])):
                     d_weights[j] += d_weights_list[k][j]
                     d_biases[j] += d_biases_list[k][j]
-                print("D_WEIGHTS[2]:", d_weights[j])
-                print("D_BIASES[2]:", d_biases[j])
                 d_weights[j] = d_weights[j]/len(data_batched[j])
                 d_biases[j] = d_biases[j]/len(data_batched[j])
-                print("D_WEIGHTS[3]:", d_weights[j])
-                print("D_BIASES[3]:", d_biases[j])
-                self.weights[j] -= d_weights[j]
-                self.biases[j] -= d_biases[j]
-                self.dump()
+                print("D_WEIGHTS:", d_weights[j])
+                print("WEIGHTs_J:", self.weights[j])
+                self.weights[j] = np.subtract(self.weights[j], d_weights[j])
+                self.biases[j] = np.subtract(self.biases[j], d_biases[j])
+                print("WEIGHTs_J:", self.weights[j])
             print("loss:", self.loss(train_truth_layers, train_input_layers))
+            print(testnet.forward(train_input_layers[0]))
 
 print("create net")
 testnet = Net((rows*cols,12,10))
@@ -165,7 +166,7 @@ print("net created, calculating initial loss")
 print(testnet.loss(train_truth_layers, train_input_layers))
 testnet.dump()
 print("train for one epoch")
-testnet.train(train_input_layers, train_truth_layers, 20)
+testnet.train(train_input_layers, train_truth_layers, 100)
 print("done. recalculating loss:")
 print(testnet.loss(train_truth_layers, train_input_layers))
 #print(testnet.forward([]))
