@@ -22,8 +22,6 @@ train_lbls_header = struct.iter_unpack('>i', train_lbls_file.read(8))
 lbls_magic = next(train_lbls_header)[0]
 lbls = next(train_lbls_header)[0]
 
-print("%d, %d, %d" % (imgs, rows, cols))
-
 #read training imgs into np array
 train_imgs = np.zeros((imgs, rows, cols)) #square format
 train_input_layers = np.zeros((imgs, rows * cols)) #layer format
@@ -40,14 +38,15 @@ train_truth_layers = np.zeros((imgs, digits)) #expected layers
 for i in range(imgs):
     train_truth_layers[i][train_lbls[i]] = 1
 
-
+#plt.imshow(train_imgs[0])
+#plt.show()
+#np.set_printoptions(threshold=sys.maxsize)
 
 '''
 We now have our database fully read in. Our images are a 3d numpy array and our labels are a 1d numpy array.
 Now we want to create a network object that can be trained.
 By trained, what we mean is adjust weights and biases over several epochs.
 '''
-#np.set_printoptions(threshold=sys.maxsize)
 
 def sigmoid(x):
     return(1/(1 + np.exp(-x)))
@@ -104,10 +103,6 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
         for i in range(len(self.layers)):
             d_activations.append(np.zeros((self.layers[i])))
 
-        d_weights = self.weights
-        d_biases = self.biases
-        d_activations = self.net
-
         d_cost = 2 * (self.net[len(self.layers)-1] - label)
         d_activations[len(self.layers)-1] = d_cost
 
@@ -133,7 +128,7 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
                 labels_batched[i][j] = labels[i*batch_size + j]
 
         for i in range(len(data_batched)):
-            print("starting batch", i)
+            print("\n\nbatch", i)
             d_weights_list = []
             d_biases_list = []
             d_weights = []
@@ -152,21 +147,28 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
                     d_biases[j] += d_biases_list[k][j]
                 d_weights[j] = d_weights[j]/len(data_batched[j])
                 d_biases[j] = d_biases[j]/len(data_batched[j])
-                print("D_WEIGHTS:", d_weights[j])
-                print("WEIGHTs_J:", self.weights[j])
                 self.weights[j] = np.subtract(self.weights[j], d_weights[j])
                 self.biases[j] = np.subtract(self.biases[j], d_biases[j])
-                print("WEIGHTs_J:", self.weights[j])
+            print(self.forward(train_input_layers[0]))
+            print(train_truth_layers[0])
+            print(self.forward(train_input_layers[9]))
+            print(train_truth_layers[9])
             print("loss:", self.loss(train_truth_layers, train_input_layers))
-            print(testnet.forward(train_input_layers[0]))
-
 print("create net")
-testnet = Net((rows*cols,12,10))
+testnet = Net((rows*cols,10,10))
 print("net created, calculating initial loss")
 print(testnet.loss(train_truth_layers, train_input_layers))
 testnet.dump()
+print(train_input_layers[0])
+print(train_input_layers[1])
+print(train_input_layers[2])
+print(testnet.forward(train_input_layers[0]))
+print(testnet.forward(train_input_layers[1]))
+print(testnet.forward(train_input_layers[2]))
+'''
 print("train for one epoch")
-testnet.train(train_input_layers, train_truth_layers, 100)
+testnet.train(train_input_layers, train_truth_layers, 20)
 print("done. recalculating loss:")
 print(testnet.loss(train_truth_layers, train_input_layers))
 #print(testnet.forward([]))
+'''
