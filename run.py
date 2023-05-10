@@ -60,10 +60,10 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
         self.layers = layers #tuple
         self.weights = []
         for i in range(1, len(layers)):
-            self.weights.append(np.full((layers[i],layers[i-1]), 1.0))
+            self.weights.append(np.full((layers[i],layers[i-1]), 0.01))
         self.biases = []
         for i in range(1, len(layers)):
-            self.biases.append(np.full((layers[i]), 0.5))
+            self.biases.append(np.full((layers[i]), 0.001))
         self.net = [] # contains activations
         for i in range(len(layers)):
             self.net.append(np.zeros((layers[i])))
@@ -88,8 +88,10 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
         for i in range(len(inputs)):
             output = self.forward(inputs[i])
             ssd_array[i] = self.ssd(labels[i], output)
-        print("LOSS ARRAY:", ssd_array)
         return np.mean(ssd_array)
+
+    def d_cost(self, expected, actual):
+        return 2 * (expected - actual)
 
     def backprop(self, label, example): # for one training example
         self.forward(example)
@@ -103,31 +105,37 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
         for i in range(len(self.layers)):
             d_activations.append(np.zeros((self.layers[i])))
 
-        d_cost = 2 * (self.net[len(self.layers)-1] - label)
-        d_activations[len(self.layers)-1] = d_cost
+        #d_cost = 2 * (self.net[len(self.layers)-1] - label)
+        d_activations[len(self.layers)-1] = self.d_cost(self.net[len(self.layers)-1], label)
 
         for i in reversed(range(len(self.layers)-1)):
             for j in range(len(self.net[i])):
                 for k in range(len(self.net[i+1])):
+                    #calculates z for the whole layer (layer i)
                     z_layer = np.dot(self.weights[i][k], self.net[i]) + self.biases[i][k]
+                    #calculates z for this specific node (layer i, index j)
                     z = self.weights[i][k][j] * self.net[i][j] + self.biases[i][k]
+                    #calculates the suggested change 
                     d_activations[i][j] += (self.weights[i][k][j] * d_sigmoid(z_layer) * d_activations[i+1][k])/len(self.net[i+1])
-                    d_biases[i][k] += (d_sigmoid(z_layer) * d_activations[i+1][k])/len(self.net[i+1])
+                    d_biases[i][k] += (d_sigmoid(z_layer) * d_activations[i+1][k])/len(self.net[i])
                     d_weights[i][k][j] = self.net[i][j] * d_sigmoid(z) * d_activations[i+1][k]
         return d_weights, d_biases
 
         
 
-    def train(self, data, labels, batch_size): #labels and data are arrays of vectors (or 2d arrays), 1 epoch
-        #np.random.shuffle(data)
+    def train(self, data, labels, batch_size, *, batches=0): #labels and data are arrays of vectors (or 2d arrays), 1 epoch
+        np.random.shuffle(data)
         data_batched = np.zeros((math.floor(len(data)/batch_size), batch_size, rows*cols))
         labels_batched = np.zeros((math.floor(len(data)/batch_size), batch_size, digits))
         for i in range(math.floor(len(data)/batch_size)):
             for j in range(batch_size):
                 data_batched[i][j] = data[i*batch_size + j]
                 labels_batched[i][j] = labels[i*batch_size + j]
-
-        for i in range(len(data_batched)):
+        
+        batch_count = batches
+        if (batches == 0):
+            batch_count = len(data_batched)
+        for i in range(batch_count):
             print("\n\nbatch", i)
             d_weights_list = []
             d_biases_list = []
@@ -147,28 +155,34 @@ class Net: # accepts a tuple indicating the number of nodes in each layer. conta
                     d_biases[j] += d_biases_list[k][j]
                 d_weights[j] = d_weights[j]/len(data_batched[j])
                 d_biases[j] = d_biases[j]/len(data_batched[j])
+                print("[A]", self.weights[j])
                 self.weights[j] = np.subtract(self.weights[j], d_weights[j])
                 self.biases[j] = np.subtract(self.biases[j], d_biases[j])
-            print(self.forward(train_input_layers[0]))
-            print(train_truth_layers[0])
-            print(self.forward(train_input_layers[9]))
-            print(train_truth_layers[9])
+                print("[B]", self.weights[j])
+            #print(self.forward(train_input_layers[5000]))
+            #print(train_truth_layers[5000])
+            #print(self.forward(train_input_layers[9000]))
+            #print(train_truth_layers[9000])
             print("loss:", self.loss(train_truth_layers, train_input_layers))
 print("create net")
-testnet = Net((rows*cols,10,10))
+testnet = Net((rows*cols, 16, 16, 10))
 print("net created, calculating initial loss")
 print(testnet.loss(train_truth_layers, train_input_layers))
 testnet.dump()
-print(train_input_layers[0])
-print(train_input_layers[1])
-print(train_input_layers[2])
+'''
+plt.imshow(train_imgs[0])
+plt.show()
+plt.imshow(train_imgs[1])
+plt.show()
+plt.imshow(train_imgs[2])
+plt.show()
 print(testnet.forward(train_input_layers[0]))
 print(testnet.forward(train_input_layers[1]))
 print(testnet.forward(train_input_layers[2]))
 '''
 print("train for one epoch")
-testnet.train(train_input_layers, train_truth_layers, 20)
+testnet.train(train_input_layers, train_truth_layers, 10)
 print("done. recalculating loss:")
 print(testnet.loss(train_truth_layers, train_input_layers))
 #print(testnet.forward([]))
-'''
+
